@@ -4,16 +4,18 @@ library(haven)
 library(openxlsx)
 library(tidyverse)
 
+setwd("C:/Users/JordanMyer/Desktop/New OneDrive/Emanate Life Sciences/DM - Inflammatix - Documents/INF-04/11. Clinical Progamming/11.3 Production Reports/11.3.3 Input Files")
+
 source("../11.3.1  R Production Programs/INF Global Functions.R")
 cleaner()
 source("../11.3.1  R Production Programs/INF Global Functions.R")
 
-importQueries <- read.xlsx(MostRecentFile("EDC/EDC Reports/",".*Medrio_QueryExport_LIVE_Inflammatix_INF_04.*xlsx$","ctime"))
+importQueries <- read.xlsx(MostRecentFile("Medrio Reports/",".*Medrio_QueryExport_LIVE_Inflammatix_INF_04.*xlsx$","ctime"))
 importVisitDT <- read_sas("EDC/SV.sas7bdat")
 importSD <- read_sas("EDC/DS_SD.sas7bdat")
 
 enrolledSubjects <- unique(importVisitDT %>% filter(SubjectStatus == "Enrolled") %>%  pull(SubjectID))
-unique(importVisitDT$SubjectStatus)
+
 
 workingQueries <- importQueries%>%
   filter(SUBJECT.ID%in%enrolledSubjects)
@@ -33,10 +35,6 @@ closedQueries <- workingQueries%>%
   filter(STATUS!="Open")%>%
   filter(QUERY.NAME!="releaseadjudReleasedForAdjudication:Missing Data")
 
-
-readyForAdjudication <- nrow(importQueries%>%
-                               filter(QUERY.NAME=="releaseadjudReleasedForAdjudication:Missing Data"))
-
 completedStudy <- importSD %>% filter(DSDECOD=="28 day data collection complete")
 #---- Unassigned Listing----
 
@@ -49,8 +47,12 @@ averageDaysUnanswered <- round(mean(openWithNoAnswer%>% pull(DAY.OPEN)),0)
 
 numberOfAnswered <- nrow(openWithAnswer)
 averageDaysAnswered <- round(mean(openWithAnswer%>% pull(DAY.OPEN)),0)
-toalAverageDays <- round(mean(allOpenQueries$DAY.OPEN),0)
+totalAverageDays <- round(mean(allOpenQueries$DAY.OPEN),0)
 
+openVAnsweredDF <- data.frame(Type = c("Open Without Response","Answered not Closed","Total Open Queries"),
+                              Count = c(numberOfUnanswered,numberOfAnswered,totalOpenQueries),
+                              `Average Age` = c(averageDaysUnanswered,averageDaysAnswered,totalAverageDays))
+openVAnsweredDF
 
 #-----Query Aging-----
 lessThan7 <- allOpenQueries%>%filter(DAY.OPEN<7)
@@ -60,7 +62,8 @@ totalQueries <- sum(nrow(lessThan7),nrow(sevenTo21),nrow(moreThan21))
 queryAgingDF <- data.frame(QueryAge=c("<7 Days","7-21 Days",">21","Total"),
                            Count=c(nrow(lessThan7),nrow(sevenTo21),nrow(moreThan21),totalQueries))
 view(queryAgingDF)
-table(moreThan21$SITE)
+
+
 df <-  openWithNoAnswer
 agingBySite <- function(df){
 lessThan7 <- df%>%filter(DAY.OPEN<7)
@@ -83,5 +86,5 @@ allTogetherBySite <- full_join(full_join(lessThan7BySite,sevenTo21BySite),moreTh
 
 return(allTogetherBySite)}
 
-agingBySite(openWithAnswer)
+agingBySite(openWithNoAnswer)
 

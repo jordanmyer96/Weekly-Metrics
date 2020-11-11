@@ -3,15 +3,14 @@ library(lubridate)
 library(haven)
 library(openxlsx)
 library(tidyverse)
-library(Hmisc)
-library("miscTools")
 
+setwd("C:/Users/JordanMyer/Desktop/New OneDrive/Emanate Life Sciences/DM - Inflammatix - Documents/INF-04/11. Clinical Progamming/11.3 Production Reports/11.3.3 Input Files")
 source("../11.3.1  R Production Programs/INF Global Functions.R")
 cleaner()
 source("../11.3.1  R Production Programs/INF Global Functions.R")
 
 CRAAssignments <- read.xlsx("CRA Assignments.xlsx")
-importQueries <- read.xlsx(MostRecentFile("../../../../../../../../Downloads/",".*Medrio_QueryExport_LIVE_Inflammatix_INF_04.*xlsx$","ctime"))
+importQueries <- read.xlsx(MostRecentFile("Medrio Reports/",".*Medrio_QueryExport_LIVE_Inflammatix_INF_04.*xlsx$","ctime"))
 workingQueries <- importQueries%>%
   mutate(SITE = substring(SITE,1,3))
 openQueries <- workingQueries%>%
@@ -69,9 +68,9 @@ generateQueryAlerts <- function(userCreated){
   
   oldUnansweredQueriesDF <- importQueries %>% 
     filter(STATUS=="Open"&is.na(RESPONSES)&DAY.OPEN>7) %>% 
-    filter(CREATED.BY==userCreated)%>% 
     select(c(3,5,6,7,22,21,8,12,17,22,20)) %>% 
     arrange(desc(DAY.OPEN))
+  
   writeDataTable(oneUserWorkbook,2,oldUnansweredQueriesDF)
   setColWidths(oneUserWorkbook,2,1:ncol(oldUnansweredQueriesDF),widths ="auto")
   
@@ -83,7 +82,7 @@ generateQueryAlerts <- function(userCreated){
   writeDataTable(oneUserWorkbook,3,oldOpenUnassignedQueriesDF)
   setColWidths(oneUserWorkbook,3,1:ncol(oldUnansweredQueriesDF),widths ="auto")
   
-  wbName <- paste("../11.3.4 Output Files/Weekly Query Reports/",gsub(".*\\((.*)\\).*", "\\1", userCreated)," ",Sys.Date(),".xlsx",sep = "")
+  wbName <- paste("../11.3.4 Output Files/Outgoing Weekly Reports/Query Reports/",gsub(".*\\((.*)\\).*", "\\1", userCreated),".xlsx",sep = "")
   saveWorkbook(oneUserWorkbook,wbName,overwrite = TRUE)
   
   emailAddress <- gsub(".*\\((.*)\\).*", "\\1", userCreated)
@@ -94,4 +93,6 @@ generateQueryAlerts <- function(userCreated){
 unique(finalCRAAssignments$Created.By)
 allCreatedBy <- unique(finalCRAAssignments$Created.By)
 
+tictoc::tic()
 for(j in 1:length(allCreatedBy)){generateQueryAlerts(allCreatedBy[j])}
+tictoc::toc()
